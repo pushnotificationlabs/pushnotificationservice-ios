@@ -29,6 +29,8 @@ final class HTTPClientTests: XCTestCase {
             XCTFail("expected throw")
         } catch let error as URLError {
             XCTAssertEqual(error.code, .badServerResponse)
+        } catch {
+            XCTFail("wrong error type: \(error)")
         }
     }
 }
