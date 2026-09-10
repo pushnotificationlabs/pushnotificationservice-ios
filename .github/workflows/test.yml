@@ -19,6 +19,9 @@ jobs:
           xcodebuild -version
           swift --version
 
+      - name: DIAGNOSTIC - list actual schemes (temporary, remove once test action works)
+        run: xcodebuild -list
+
       - name: Run tests (Simulator — required, not optional)
         # Do NOT use bare `swift test` here. It builds/runs the test host
         # as a plain macOS command-line process, which has no Info.plist
