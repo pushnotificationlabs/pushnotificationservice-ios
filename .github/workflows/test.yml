@@ -23,13 +23,7 @@ jobs:
         # Do NOT use bare `swift test` here. It builds/runs the test host
         # as a plain macOS command-line process, which has no Info.plist
         # (Bundle.main.bundleIdentifier is nil there — fails the bundle_id
-        # registration test) and no Keychain entitlements
-        # (SecItemAdd -> errSecMissingEntitlement, previously an assert()
-        # that could crash the whole run; that's since been softened, but
-        # the underlying entitlement gap is still real). Both are
-        # documented, expected-under-bare-`swift-test` failures, not code
-        # defects — see the plan's per-task notes on this. xcodebuild
-        # against a real Simulator destination has neither problem.
+        # registration test).
         #
         # Picks whichever iPhone Simulator the runner's Xcode actually has
         # (newest available) rather than hardcoding a model name that will
@@ -42,6 +36,18 @@ jobs:
         # but those are build-only. Only the "-Package" umbrella scheme
         # has the Test action configured, and it's the one that runs
         # every test target (Core/SDK/ExtensionKit) in one invocation.
+        #
+        # CODE_SIGNING_ALLOWED=NO: a raw SPM package (no wrapping .xcodeproj/
+        # .app target) has no entitlements file, so its auto-generated test
+        # host isn't in any Keychain access group — SecItemAdd/SecItemUpdate
+        # fail with errSecMissingEntitlement (-34018) even under a real
+        # Simulator destination, contrary to what earlier documentation in
+        # this repo's history assumed ("Simulator avoids the entitlement
+        # gap, only bare swift test hits it" — that assumption was wrong,
+        # discovered only once this actually ran in real CI for the first
+        # time). Disabling code signing removes the signature Keychain would
+        # otherwise check an access-group against, which lets an unsigned
+        # Simulator process read/write its own default keychain.
         run: |
           DEVICE_NAME=$(xcrun simctl list devices available iOS \
             | grep -Eo 'iPhone [0-9]+( Pro( Max)?)?' \
@@ -49,4 +55,5 @@ jobs:
           echo "Using simulator: $DEVICE_NAME"
           xcodebuild test \
             -scheme PushNotificationServiceSDK-Package \
-            -destination "platform=iOS Simulator,name=$DEVICE_NAME"
+            -destination "platform=iOS Simulator,name=$DEVICE_NAME" \
+            CODE_SIGNING_ALLOWED=NO
