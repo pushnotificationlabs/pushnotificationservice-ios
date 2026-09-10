@@ -1,0 +1,44 @@
+name: Test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    # GitHub's hosted macOS runner — ships Xcode + iOS Simulators
+    # preinstalled. No physical Mac or iPhone needed; the Simulator is
+    # sufficient for this package's whole test suite, including the
+    # Keychain-backed tests.
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show Xcode/Swift versions
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Run tests (Simulator — required, not optional)
+        # Do NOT use bare `swift test` here. It builds/runs the test host
+        # as a plain macOS command-line process, which has no Info.plist
+        # (Bundle.main.bundleIdentifier is nil there — fails the bundle_id
+        # registration test) and no Keychain entitlements
+        # (SecItemAdd -> errSecMissingEntitlement, previously an assert()
+        # that could crash the whole run; that's since been softened, but
+        # the underlying entitlement gap is still real). Both are
+        # documented, expected-under-bare-`swift-test` failures, not code
+        # defects — see the plan's per-task notes on this. xcodebuild
+        # against a real Simulator destination has neither problem.
+        #
+        # Picks whichever iPhone Simulator the runner's Xcode actually has
+        # (newest available) rather than hardcoding a model name that will
+        # eventually stop existing as Xcode versions roll forward.
+        run: |
+          DEVICE_NAME=$(xcrun simctl list devices available iOS \
+            | grep -Eo 'iPhone [0-9]+( Pro( Max)?)?' \
+            | sort -V | tail -1)
+          echo "Using simulator: $DEVICE_NAME"
+          xcodebuild test \
+            -scheme PushNotificationServiceSDK \
+            -destination "platform=iOS Simulator,name=$DEVICE_NAME"
