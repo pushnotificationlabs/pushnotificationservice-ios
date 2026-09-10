@@ -1,11 +1,13 @@
 # PushNotificationService iOS SDK
 
+[![Test](https://github.com/pushnotificationlabs/pushnotificationservice-ios/actions/workflows/test.yml/badge.svg)](https://github.com/pushnotificationlabs/pushnotificationservice-ios/actions/workflows/test.yml)
+
 Swift Package wrapping PushNotificationService.com's native device-token
 REST API. Min target: iOS 15. Zero third-party dependencies.
 
 ## Install
 
-Xcode → File → Add Package Dependencies → `https://github.com/pushnotificationservice/pushnotificationservice-ios`
+Xcode → File → Add Package Dependencies → `https://github.com/pushnotificationlabs/pushnotificationservice-ios`
 
 ## Register for push
 
