@@ -19,9 +19,6 @@ jobs:
           xcodebuild -version
           swift --version
 
-      - name: DIAGNOSTIC - list actual schemes (temporary, remove once test action works)
-        run: xcodebuild -list
-
       - name: Run tests (Simulator — required, not optional)
         # Do NOT use bare `swift test` here. It builds/runs the test host
         # as a plain macOS command-line process, which has no Info.plist
@@ -37,11 +34,19 @@ jobs:
         # Picks whichever iPhone Simulator the runner's Xcode actually has
         # (newest available) rather than hardcoding a model name that will
         # eventually stop existing as Xcode versions roll forward.
+        #
+        # Scheme must be "<PackageName>-Package", not the bare package/
+        # product name — confirmed via `xcodebuild -list` against this
+        # exact package: Xcode auto-generates one scheme per library
+        # product (PushNotificationServiceSDK, PushNotificationServiceExtensionKit),
+        # but those are build-only. Only the "-Package" umbrella scheme
+        # has the Test action configured, and it's the one that runs
+        # every test target (Core/SDK/ExtensionKit) in one invocation.
         run: |
           DEVICE_NAME=$(xcrun simctl list devices available iOS \
             | grep -Eo 'iPhone [0-9]+( Pro( Max)?)?' \
             | sort -V | tail -1)
           echo "Using simulator: $DEVICE_NAME"
           xcodebuild test \
-            -scheme PushNotificationServiceSDK \
+            -scheme PushNotificationServiceSDK-Package \
             -destination "platform=iOS Simulator,name=$DEVICE_NAME"
