@@ -2,6 +2,16 @@ import XCTest
 @testable import PushNotificationServiceSDK
 import PushNotificationServiceTestSupport
 
+// Retroactive conformance, test-target-local: InMemoryTokenStore lives in
+// PushNotificationServiceTestSupport, which (deliberately) doesn't depend on
+// PushNotificationServiceSDK, so it can't declare this itself. These tests
+// care about registration/rotation logic, not the Keychain, so they use this
+// fake instead of KeychainTokenStore — a real device Keychain has no
+// meaning in a hostless SPM test bundle (no app, no entitlements, no access
+// group; see KeychainTokenStoreTests.swift for the tests that actually
+// exercise the real Keychain and why they're skipped hostless).
+extension InMemoryTokenStore: TokenStoring {}
+
 final class PushNotificationServiceRegistrationTests: XCTestCase {
     override func tearDown() {
         MockURLProtocol.requestHandler = nil
@@ -18,7 +28,7 @@ final class PushNotificationServiceRegistrationTests: XCTestCase {
 
         PushNotificationService.configureForTesting(
             siteId: "site-123", baseURL: URL(string: "https://api.pushnotificationservice.com")!,
-            session: MockURLProtocol.makeSession(), tokenStore: KeychainTokenStore(service: "test.\(UUID())")
+            session: MockURLProtocol.makeSession(), tokenStore: InMemoryTokenStore()
         )
 
         try await PushNotificationService.didReceiveToken(Data([0xAB, 0xCD]))
@@ -39,7 +49,7 @@ final class PushNotificationServiceRegistrationTests: XCTestCase {
             return (response, Data(#"{"deviceToken":"dt_1"}"#.utf8))
         }
 
-        let tokenStore = KeychainTokenStore(service: "test.\(UUID())")
+        let tokenStore = InMemoryTokenStore()
         PushNotificationService.configureForTesting(
             siteId: "site-123", baseURL: URL(string: "https://api.pushnotificationservice.com")!,
             session: MockURLProtocol.makeSession(), tokenStore: tokenStore
@@ -67,7 +77,7 @@ final class PushNotificationServiceRegistrationTests: XCTestCase {
         MockURLProtocol.requestHandler = { request in
             (HTTPURLResponse(url: request.url!, statusCode: 204, httpVersion: nil, headerFields: nil)!, Data())
         }
-        let tokenStore = KeychainTokenStore(service: "test.\(UUID())")
+        let tokenStore = InMemoryTokenStore()
         tokenStore.save("existing")
         PushNotificationService.configureForTesting(
             siteId: "site-123", baseURL: URL(string: "https://api.pushnotificationservice.com")!,
@@ -101,7 +111,7 @@ final class PushNotificationServiceRegistrationTests: XCTestCase {
 
         PushNotificationService.configureForTesting(
             siteId: "site-123", baseURL: URL(string: "https://api.pushnotificationservice.com")!,
-            session: MockURLProtocol.makeSession(), tokenStore: KeychainTokenStore(service: "test.\(UUID())")
+            session: MockURLProtocol.makeSession(), tokenStore: InMemoryTokenStore()
         )
 
         try await PushNotificationService.didReceiveToken(Data([0x01]))
@@ -115,7 +125,7 @@ final class PushNotificationServiceRegistrationTests: XCTestCase {
 
         PushNotificationService.configureForTesting(
             siteId: "site-123", baseURL: URL(string: "https://api.pushnotificationservice.com")!,
-            session: MockURLProtocol.makeSession(), tokenStore: KeychainTokenStore(service: "test.\(UUID())")
+            session: MockURLProtocol.makeSession(), tokenStore: InMemoryTokenStore()
         )
 
         try await PushNotificationService.unregister()
